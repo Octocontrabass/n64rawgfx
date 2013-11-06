@@ -265,7 +265,11 @@ int main( int argc, char **argv )
             ibuf = checked_malloc( size );
             obuf = checked_malloc( header.imagesize );
             
-            fread( ibuf, 1, size, romfile );
+            if( fread( ibuf, 1, size, romfile ) != size )
+            {
+                fprintf( stderr, "Failed to read input file.\n" );
+                return EXIT_FAILURE;
+            }
             n64_export( format, depth, width * height, ibuf, obuf );
             fwrite( &header, sizeof( BMPHEADER ), 1, bmpfile );
             for( int32_t y = height - 1; y >= 0; y-- )
@@ -412,7 +416,11 @@ int main( int argc, char **argv )
             
             for( int32_t y = height - 1; y >= 0; y-- )
             {
-                fread( ibuf + (y * width), sizeof( uint32_t ), width, bmpfile );
+                if( fread( ibuf + (y * width), sizeof( uint32_t ), width, bmpfile ) != width )
+                {
+                    fprintf( stderr, "Error reading bitmap file.\n" );
+                    return EXIT_FAILURE;
+                }
             }
             n64_import( format, depth, width * height, ibuf, obuf );
             fwrite( obuf, 1, size, romfile );
@@ -425,3 +433,4 @@ int main( int argc, char **argv )
             print_help( argv[0] );
     }
 }
+

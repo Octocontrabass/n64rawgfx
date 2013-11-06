@@ -17,6 +17,7 @@
  */
 
 #include <stdint.h>
+#include <stdlib.h>
 
 enum E_FORMAT { FORMAT_RGBA, FORMAT_YUV, FORMAT_CI, FORMAT_IA, FORMAT_I };
 enum E_DEPTH { DEPTH_4BIT, DEPTH_8BIT, DEPTH_16BIT, DEPTH_32BIT };
