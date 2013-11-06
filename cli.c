@@ -265,7 +265,11 @@ int main( int argc, char **argv )
                 return EXIT_FAILURE;
             }
             
-            fread( ibuf, 1, size, romfile );
+            if( fread( ibuf, 1, size, romfile ) != size )
+            {
+                fprintf( stderr, "Failed to read input file.\n" );
+                return EXIT_FAILURE;
+            }
             n64_export( format, depth, width * height, ibuf, obuf );
             fwrite( &header, sizeof( BMPHEADER ), 1, bmpfile );
             for( int32_t y = height - 1; y >= 0; y-- )
