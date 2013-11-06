@@ -9,11 +9,11 @@
  * have question marks.
  * 
  *  Format  4-bit   8-bit   16-bit  32-bit
- *  RGBA    ------  ------  export  export
+ *  RGBA    ------  ------  YES     YES
  *  YUV     ?       ?       no      ?
  *  CI      no      no      ------  ------
- *  IA      ?       ?       export  ?
- *  I       export  export  ------  ------
+ *  IA      ?       ?       YES     ?
+ *  I       YES     YES     ------  ------
  */
 
 #include <stdint.h>

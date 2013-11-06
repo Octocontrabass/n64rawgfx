@@ -103,7 +103,105 @@ void n64_export( enum E_FORMAT format, enum E_DEPTH depth, size_t count, const u
     }
     return;
 }
+
 void n64_import( enum E_FORMAT format, enum E_DEPTH depth, size_t count, const uint32_t *in, uint8_t *out )
 {
+    switch( format )
+    {
+        case FORMAT_RGBA:
+        {
+            switch( depth )
+            {
+                case DEPTH_16BIT:
+                {
+                    for( size_t i = 0; i < count; i++ )
+                    {
+                        out[i * 2] = (in[i] & 0xf80000) >> 16 | (in[i] & 0xe000) >> 13;
+                        out[i * 2 + 1] = (in[i] & 0x1800) >> 5 | (in[i] & 0xf8) >> 2 | (in[i] & 0x80000000) >> 31;
+                    }
+                    break;
+                }
+                case DEPTH_32BIT:
+                {
+                    for( size_t i = 0; i < count; i++ )
+                    {
+                        out[i * 4] = (in[i] & 0xff0000) >> 16;
+                        out[i * 4 + 1] = (in[i] & 0xff00) >> 8;
+                        out[i * 4 + 2] = in[i] & 0xff;
+                        out[i * 4 + 3] = (in[i] & 0xff000000) >> 24;
+                    }
+                    break;
+                }
+                default:
+                {
+                    break;
+                }
+            }
+            break;
+        }
+        case FORMAT_YUV:
+        {
+            break;
+        }
+        case FORMAT_CI:
+        {
+            break;
+        }
+        case FORMAT_IA:
+        {
+            switch( depth )
+            {
+                case DEPTH_16BIT:
+                {
+                    for( size_t i = 0; i < count; i++ )
+                    {
+                        uint32_t temp = ((in[i] & 0xff0000) >> 16) + ((in[i] & 0xff00) >> 7) + (in[i] & 0xff);
+                        out[i * 2] = (temp + (temp >> 8)) >> 2;
+                        out[i * 2 + 1] = (in[i] & 0xff000000) >> 24;
+                    }
+                    break;
+                }
+                default:
+                {
+                    break;
+                }
+            }
+            break;
+        }
+        case FORMAT_I:
+        {
+            switch( depth )
+            {
+                case DEPTH_4BIT:
+                {
+                    for( size_t i = 0; i < count; i+=2 )
+                    {
+                        uint32_t temp1 = ((in[i] & 0xff0000) >> 16) + ((in[i] & 0xff00) >> 7) + (in[i] & 0xff);
+                        uint32_t temp2 = ((in[i + 1] & 0xff0000) >> 16) + ((in[i + 1] & 0xff00) >> 7) + (in[i + 1] & 0xff);
+                        out[i / 2] = ((temp1 + (temp1 >> 8)) & 0x3c0) >> 2 | ((temp2 + (temp2 >> 8)) & 0x3c0) >> 6;
+                    }
+                    break;
+                }
+                case DEPTH_8BIT:
+                {
+                    for( size_t i = 0; i < count; i++ )
+                    {
+                        uint32_t temp = ((in[i] & 0xff0000) >> 16) + ((in[i] & 0xff00) >> 7) + (in[i] & 0xff);
+                        out[i] = (temp + (temp >> 8)) >> 2;
+                    }
+                    break;
+                }
+                default:
+                {
+                    break;
+                }
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
     return;
 }
