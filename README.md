@@ -15,7 +15,7 @@ It has built-in help, so look at that to see an explanation of all the parameter
 
     n64rawgfx -m export -r "Super Mario 64.ext.z64" -b cactus.bmp -f RGBA -d 16 -a 0xcdbbd1 -x 32 -y 32
 
-Importing doesn't work yet, but when it does, the command will be similar.
+Importing is similar, except the image dimensions are automatically read from the BMP file. The following command replaces the coins with cacti.
 
     n64rawgfx -m import -r "Super Mario 64.ext.z64" -b cactus.bmp -f IA -d 16 -a 0xAB7B8C
 
