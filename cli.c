@@ -22,7 +22,7 @@ void __attribute__((noreturn)) print_help( const char* const name )
         "  -r <file>  --romfile <file>  Export from/import to ROM file\n"
         "  -b <file>  --bmpfile <file>  Export to/import from BMP file\n"
         "  -m <mode>  --mode <mode>     Mode (export, import)\n"
-        "  -f <fmt>   --format <fmt>    Format (RGBA, IA)\n"
+        "  -f <fmt>   --format <fmt>    Format (RGBA, IA, I)\n"
 //      "  -f <fmt>   --format <fmt>    Format (RGBA, YUV, CI, IA, I)\n"
         "  -d <bits>  --depth <bits>    Bit depth (16, 32)\n"
         "  -a <addr>  --address <addr>  Address (use \"0x\" for hexadecimal)\n"
@@ -233,6 +233,12 @@ int main( int argc, char **argv )
                 }
             }
             
+            if( fseek( romfile, address, SEEK_SET ) )
+            {
+                fprintf( stderr, "Failed to read input file.\n" );
+                return EXIT_FAILURE;
+            }
+            
             if( depth == DEPTH_4BIT && (width & 1) > 0 ) width++;
             
             header.width = width;
@@ -259,12 +265,6 @@ int main( int argc, char **argv )
             ibuf = checked_malloc( size );
             obuf = checked_malloc( header.imagesize );
             
-            if( fseek( romfile, address, SEEK_SET ) )
-            {
-                fprintf( stderr, "Failed to read input file.\n" );
-                return EXIT_FAILURE;
-            }
-            
             fread( ibuf, 1, size, romfile );
             n64_export( format, depth, width * height, ibuf, obuf );
             fwrite( &header, sizeof( BMPHEADER ), 1, bmpfile );
@@ -279,8 +279,147 @@ int main( int argc, char **argv )
         }
         case MODE_IMPORT:
         {
-            fprintf( stderr, "Not implemented yet.\n" );
-            return EXIT_FAILURE;
+            BMPHEADER header;
+            size_t size;
+            uint32_t *ibuf;
+            uint8_t *obuf;
+            
+            if( romname == NULL || format < 0 || depth < 0 || address < 0 )
+            {
+                fprintf( stderr, "Invalid arguments for import.\n" );
+                return EXIT_FAILURE;
+            }
+            switch( format )
+            {
+                case FORMAT_RGBA:
+                {
+                    if( depth < DEPTH_16BIT )
+                    {
+                        fprintf( stderr, "Unsupported format.\n" );
+                        return EXIT_FAILURE;
+                    }
+                    break;
+                }
+                case FORMAT_IA:
+                {
+                    if( depth != DEPTH_16BIT )
+                    {
+                        fprintf( stderr, "Unsupported format.\n" );
+                        return EXIT_FAILURE;
+                    }
+                    break;
+                }
+                case FORMAT_I:
+                {
+                    if( depth > DEPTH_8BIT )
+                    {
+                        fprintf( stderr, "Unsupported format.\n" );
+                        return EXIT_FAILURE;
+                    }
+                    break;
+                }
+                default:
+                {
+                    fprintf( stderr, "Unsupported format.\n" );
+                    return EXIT_FAILURE;
+                }
+            }
+            romfile = fopen( romname, "r+b" );
+            if( romfile == NULL )
+            {
+                fprintf( stderr, "Could not open %s for writing.\n", romname );
+                return EXIT_FAILURE;
+            }
+            if( bmpname == NULL )
+            {
+                if( address > UINT32_MAX )
+                {
+                    fprintf( stderr, "Invalid arguments for import.\n" );
+                    return EXIT_FAILURE;
+                }
+                bmpname = checked_malloc( 13 );
+                sprintf( bmpname, "%08" PRIX32 ".bmp", (uint32_t)address );
+                bmpfile = fopen( bmpname, "rb" );
+                if( bmpfile == NULL )
+                {
+                    fprintf( stderr, "Could not open %s for reading.\n", bmpname );
+                    return EXIT_FAILURE;
+                }
+                free( bmpname );
+            }
+            else
+            {
+                bmpfile = fopen( bmpname, "rb" );
+                if( bmpfile == NULL )
+                {
+                    fprintf( stderr, "Could not open %s for reading.\n", bmpname );
+                    return EXIT_FAILURE;
+                }
+            }
+            
+            if( fread( &header, sizeof( BMPHEADER ), 1, bmpfile ) != 1 )
+            {
+                fprintf( stderr, "Input file invalid.\n" );
+                return EXIT_FAILURE;
+            }
+            if( header.magic != 0x4d42 || header.headersize < 0x28
+                || header.width < 1 || header.height < 1
+                || header.planes != 1 || header.bpp != 32
+                || header.compression != 0 )
+            {
+                fprintf( stderr, "Input file unsupported or invalid.\n" );
+                return EXIT_FAILURE;
+            }
+            
+            if( fseek( bmpfile, header.offset, SEEK_SET ) )
+            {
+                fprintf( stderr, "Failed to read input file.\n" );
+                return EXIT_FAILURE;
+            }
+            if( fseek( romfile, address, SEEK_SET ) )
+            {
+                fprintf( stderr, "Failed to read output file.\n" );
+                return EXIT_FAILURE;
+            }
+            
+            width = header.width;
+            height = header.height;
+            
+            if( depth == DEPTH_4BIT && (width & 1) > 0 )
+            {
+                fprintf( stderr, "Width must be divisible by 2 for 4-bit.\n" );
+                return EXIT_FAILURE;
+            }
+            
+            switch( depth )
+            {
+                case DEPTH_4BIT:
+                    size = (width / 2) * height;
+                    break;
+                case DEPTH_8BIT:
+                    size = width * height;
+                    break;
+                case DEPTH_16BIT:
+                    size = width * height * 2;
+                    break;
+                default:
+                    size = width * height * 4;
+                    break;
+            }
+            
+            ibuf = checked_malloc( width * height * 4 );
+            obuf = checked_malloc( size );
+            
+            for( int32_t y = height - 1; y >= 0; y-- )
+            {
+                fread( ibuf + (y * width), sizeof( uint32_t ), width, bmpfile );
+            }
+            n64_import( format, depth, width * height, ibuf, obuf );
+            fwrite( obuf, 1, size, romfile );
+            fclose( romfile );
+            fclose( bmpfile );
+            
+            return EXIT_SUCCESS;
         }
         default:
             print_help( argv[0] );
