@@ -1,5 +1,7 @@
 *.exe
 *.bmp
+*.png
+*.bin
 *.rom
 *.n64
 *.v64

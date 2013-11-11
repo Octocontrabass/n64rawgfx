@@ -6,7 +6,7 @@
 
 #include "n64rawgfx.h"
 
-void n64_export( enum E_FORMAT format, enum E_DEPTH depth, size_t count, const uint8_t *in, uint32_t *out )
+void n64_export( enum E_FORMAT format, enum E_DEPTH depth, size_t count, const uint8_t *in, uint32_t *out, const uint32_t *pal )
 {
     switch( format )
     {
@@ -47,6 +47,30 @@ void n64_export( enum E_FORMAT format, enum E_DEPTH depth, size_t count, const u
         }
         case FORMAT_CI:
         {
+            switch( depth )
+            {
+                case DEPTH_4BIT:
+                {
+                    for( size_t i = 0; i < count; i+=2 )
+                    {
+                        out[i] = pal[in[i / 2] >> 4];
+                        out[i + 1] = pal[in[i / 2] & 0xf];
+                    }
+                    break;
+                }
+                case DEPTH_8BIT:
+                {
+                    for( size_t i = 0; i < count; i++ )
+                    {
+                        out[i] = pal[in[i]];
+                    }
+                    break;
+                }
+                default:
+                {
+                    break;
+                }
+            }
             break;
         }
         case FORMAT_IA:

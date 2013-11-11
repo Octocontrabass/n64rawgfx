@@ -18,16 +18,18 @@ void __attribute__((noreturn)) print_help( const char* const name )
         "N64 Raw Graphics Tool\n"
         "Usage: %s [options]\n"
         "Options:\n"
-        "  -h         --help            Show this help\n"
-        "  -r <file>  --romfile <file>  Export from/import to ROM file\n"
-        "  -b <file>  --bmpfile <file>  Export to/import from BMP file\n"
-        "  -m <mode>  --mode <mode>     Mode (export, import)\n"
-        "  -f <fmt>   --format <fmt>    Format (RGBA, IA, I)\n"
-//      "  -f <fmt>   --format <fmt>    Format (RGBA, YUV, CI, IA, I)\n"
-        "  -d <bits>  --depth <bits>    Bit depth (16, 32)\n"
-        "  -a <addr>  --address <addr>  Address (use \"0x\" for hexadecimal)\n"
-        "  -x <num>   --width <num>     Width (export only)\n"
-        "  -y <num>   --height <num>    Height (export only)\n"
+        "  -h         --help             Show this help\n"
+        "  -r <file>  --romfile <file>   Export from/import to ROM file\n"
+        "  -b <file>  --bmpfile <file>   Export to/import from BMP file\n"
+        "  -m <mode>  --mode <mode>      Mode (export, import)\n"
+        "  -f <fmt>   --format <fmt>     Format (RGBA, CI, IA, I)\n"
+//      "  -f <fmt>   --format <fmt>     Format (RGBA, YUV, CI, IA, I)\n"
+        "  -d <bits>  --depth <bits>     Bit depth (4, 8, 16, 32)\n"
+        "  -a <addr>  --address <addr>   Address (use \"0x\" for hexadecimal)\n"
+        "  -x <num>   --width <num>      Width (export only)\n"
+        "  -y <num>   --height <num>     Height (export only)\n"
+        "             --pdepth <bits>    Palette depth (16, 32) (CI only)\n"
+        "             --paddress <addr>  Palette address (CI only)\n"
         "\n"
         "https://github.com/Octocontrabass\n", name );
     exit( EXIT_SUCCESS );
@@ -51,7 +53,9 @@ int main( int argc, char **argv )
     enum E_MODE mode = MODE_HELP;
     enum E_FORMAT format = -1;
     enum E_DEPTH depth = -1;
+    enum E_DEPTH pdepth = -1;
     long address = -1;
+    long paddress = -1;
     int32_t width = 0;
     int32_t height = 0;
     FILE *romfile = NULL;
@@ -60,15 +64,17 @@ int main( int argc, char **argv )
     while(1)
     {
         struct option longopts[] = {
-            { "help",    no_argument,       0, 'h' },
-            { "romfile", required_argument, 0, 'r' },
-            { "bmpfile", required_argument, 0, 'b' },
-            { "mode",    required_argument, 0, 'm' },
-            { "format",  required_argument, 0, 'f' },
-            { "depth",   required_argument, 0, 'd' },
-            { "address", required_argument, 0, 'a' },
-            { "width",   required_argument, 0, 'x' },
-            { "height",  required_argument, 0, 'y' },
+            { "help",     no_argument,       0, 'h' },
+            { "romfile",  required_argument, 0, 'r' },
+            { "bmpfile",  required_argument, 0, 'b' },
+            { "mode",     required_argument, 0, 'm' },
+            { "format",   required_argument, 0, 'f' },
+            { "depth",    required_argument, 0, 'd' },
+            { "address",  required_argument, 0, 'a' },
+            { "width",    required_argument, 0, 'x' },
+            { "height",   required_argument, 0, 'y' },
+            { "pdepth",   required_argument, 0, 'e' },
+            { "paddress", required_argument, 0, 'z' },
             { 0,         0,                 0, 0   }
         };
         int opt = getopt_long( argc, argv, "hr:b:m:f:d:a:x:y:", longopts, NULL );
@@ -136,8 +142,25 @@ int main( int argc, char **argv )
                 }
                 break;
             }
+            case 'e':
+            {
+                long temp = strtol( optarg, NULL, 0 );
+                switch( temp )
+                {
+                    case 16:
+                        pdepth = DEPTH_16BIT;
+                        break;
+                    case 32:
+                        pdepth = DEPTH_32BIT;
+                        break;
+                }
+                break;
+            }
             case 'a':
                 address = strtol( optarg, NULL, 0 );
+                break;
+            case 'z':
+                paddress = strtol( optarg, NULL, 0 );
                 break;
             case 'x':
                 width = strtol( optarg, NULL, 0 );
@@ -159,6 +182,7 @@ int main( int argc, char **argv )
             size_t size;
             uint8_t *ibuf;
             uint32_t *obuf;
+            uint32_t *pbuf = NULL;
             
             if( romname == NULL || format < 0 || depth < 0 || address < 0 || width <= 0 || height <= 0 )
             {
@@ -170,6 +194,20 @@ int main( int argc, char **argv )
                 case FORMAT_RGBA:
                 {
                     if( depth < DEPTH_16BIT )
+                    {
+                        fprintf( stderr, "Unsupported format.\n" );
+                        return EXIT_FAILURE;
+                    }
+                    break;
+                }
+                case FORMAT_CI:
+                {
+                    if( pdepth < 0 || paddress < 0 )
+                    {
+                        fprintf( stderr, "Invalid arguments for export.\n" );
+                        return EXIT_FAILURE;
+                    }
+                    if( depth > DEPTH_8BIT )
                     {
                         fprintf( stderr, "Unsupported format.\n" );
                         return EXIT_FAILURE;
@@ -233,6 +271,26 @@ int main( int argc, char **argv )
                 }
             }
             
+            if( format == FORMAT_CI )
+            {
+                if( fseek( romfile, paddress, SEEK_SET ) )
+                {
+                    fprintf( stderr, "Failed to read input file.\n" );
+                    return EXIT_FAILURE;
+                }
+                int colors = (depth == DEPTH_4BIT)? 16 : 256;
+                size = colors * ((pdepth == DEPTH_16BIT)? 2 : 4);
+                ibuf = checked_malloc( size );
+                pbuf = checked_malloc( colors * sizeof( uint32_t ) );
+                if( fread( ibuf, 1, size, romfile ) != size )
+                {
+                    fprintf( stderr, "Failed to read input file.\n" );
+                    return EXIT_FAILURE;
+                }
+                n64_export( FORMAT_RGBA, pdepth, colors, ibuf, pbuf, NULL );
+                free( ibuf );
+            }
+            
             if( fseek( romfile, address, SEEK_SET ) )
             {
                 fprintf( stderr, "Failed to read input file.\n" );
@@ -270,7 +328,7 @@ int main( int argc, char **argv )
                 fprintf( stderr, "Failed to read input file.\n" );
                 return EXIT_FAILURE;
             }
-            n64_export( format, depth, width * height, ibuf, obuf );
+            n64_export( format, depth, width * height, ibuf, obuf, pbuf );
             fwrite( &header, sizeof( BMPHEADER ), 1, bmpfile );
             for( int32_t y = height - 1; y >= 0; y-- )
             {

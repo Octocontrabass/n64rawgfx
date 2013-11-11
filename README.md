@@ -27,6 +27,7 @@ Export Formats
 The following formats can be exported:
 
 * RGBA (16-bit, 32-bit)
+* CI (4-bit, 8-bit)
 * IA (16-bit)
 * I (4-bit, 8-bit)
 
