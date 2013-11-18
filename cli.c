@@ -216,7 +216,7 @@ int main( int argc, char **argv )
                 }
                 case FORMAT_IA:
                 {
-                    if( depth != DEPTH_16BIT )
+                    if( depth > DEPTH_16BIT )
                     {
                         fprintf( stderr, "Unsupported format.\n" );
                         return EXIT_FAILURE;

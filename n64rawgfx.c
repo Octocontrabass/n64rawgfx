@@ -54,7 +54,7 @@ void n64_export( enum E_FORMAT format, enum E_DEPTH depth, size_t count, const u
                     for( size_t i = 0; i < count; i+=2 )
                     {
                         out[i] = pal[in[i / 2] >> 4];
-                        out[i + 1] = pal[in[i / 2] & 0xf];
+                        out[i + 1] = pal[in[i / 2] & 0x0f];
                     }
                     break;
                 }
@@ -77,6 +77,32 @@ void n64_export( enum E_FORMAT format, enum E_DEPTH depth, size_t count, const u
         {
             switch( depth )
             {
+                case DEPTH_4BIT:
+                {
+                    for( size_t i = 0; i < count; i+=2 )
+                    {
+                        out[i] = ((in[i / 2] & 0x10)? 0xff000000 : 0x00000000)
+                            | (in[i / 2] & 0xe0) << 16 | (in[i / 2] & 0xe0) << 13 | (in[i / 2] & 0xc0) << 10
+                            | (in[i / 2] & 0xe0) << 8 | (in[i / 2] & 0xe0) << 5 | (in[i / 2] & 0xc0) << 2
+                            | (in[i / 2] & 0xe0) | (in[i / 2] & 0xe0) >> 3 | in[i / 2] >> 6;
+                        out[i + 1] = ((in[i / 2] & 0x01)? 0xff000000 : 0x00000000)
+                            | (in[i / 2] & 0x0e) << 20 | (in[i / 2] & 0x0e) << 17 | (in[i / 2] & 0x0c) << 14
+                            | (in[i / 2] & 0x0e) << 12 | (in[i / 2] & 0x0e) << 9 | (in[i / 2] & 0x0c) << 6
+                            | (in[i / 2] & 0x0e) << 4 | (in[i / 2] & 0x0e) << 1 | (in[i / 2] & 0x0c) >> 2;
+                    }
+                    break;
+                }
+                case DEPTH_8BIT:
+                {
+                    for( size_t i = 0; i < count; i++ )
+                    {
+                        out[i] = (in[i] & 0x0f) << 28 | (in[i] & 0x0f) << 24
+                            | (in[i] & 0xf0) << 16 | (in[i] & 0xf0) << 12
+                            | (in[i] & 0xf0) << 8 | (in[i] & 0xf0) << 4
+                            | (in[i] & 0xf0) | in[i] >> 4;
+                    }
+                    break;
+                }
                 case DEPTH_16BIT:
                 {
                     for( size_t i = 0; i < count; i++ )
