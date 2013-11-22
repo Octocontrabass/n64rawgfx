@@ -201,6 +201,26 @@ void n64_import( enum E_FORMAT format, enum E_DEPTH depth, size_t count, const u
         {
             switch( depth )
             {
+                case DEPTH_4BIT:
+                {
+                    for( size_t i = 0; i < count; i+=2 )
+                    {
+                        uint32_t temp1 = ((in[i] & 0xff0000) >> 16) + ((in[i] & 0xff00) >> 7) + (in[i] & 0xff);
+                        uint32_t temp2 = ((in[i + 1] & 0xff0000) >> 16) + ((in[i + 1] & 0xff00) >> 7) + (in[i + 1] & 0xff);
+                        out[i / 2] = ((temp1 + (temp1 >> 8)) & 0x380) >> 2 | (in[i] & 0x80000000) >> 27
+                                | ((temp2 + (temp2 >> 8)) & 0x380) >> 6 | (in[i + 1] & 0x80000000) >> 31;
+                    }
+                    break;
+                }
+                case DEPTH_8BIT:
+                {
+                    for( size_t i = 0; i < count; i++ )
+                    {
+                        uint32_t temp = ((in[i] & 0xff0000) >> 16) + ((in[i] & 0xff00) >> 7) + (in[i] & 0xff);
+                        out[i] = ((temp + (temp >> 8)) & 0x3c0) >> 2 | in[i] >> 28;
+                    }
+                    break;
+                }
                 case DEPTH_16BIT:
                 {
                     for( size_t i = 0; i < count; i++ )

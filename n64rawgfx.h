@@ -11,7 +11,7 @@
  *  RGBA    ------  ------  YES     YES
  *  YUV     ------  ------  no      ------
  *  CI      export  export  ------  ------
- *  IA      export  export  YES     ------
+ *  IA      YES     YES     YES     ------
  *  I       YES     YES     ------  ------
  */
 

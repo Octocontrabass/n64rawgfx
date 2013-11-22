@@ -39,7 +39,7 @@ Import Formats
 The following formats can be imported:
 
 * RGBA (16-bit, 32-bit)
-* IA (16-bit)
+* IA (4-bit, 8-bit, 16-bit)
 * I (4-bit, 8-bit)
 
 The input file must be a 32-bit BMP file.
